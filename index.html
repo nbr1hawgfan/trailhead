@@ -34,12 +34,16 @@
   <!-- SEARCH VIEW -->
   <section class="view active" id="view-search">
     <div class="filter-bar">
+      <div class="field field-full">
+        <label for="fAddress">Search near this address (optional)</label>
+        <input type="text" id="fAddress" placeholder="e.g. a workplace or school address" />
+      </div>
       <div class="field">
-        <label for="fZip">Zip code (optional)</label>
+        <label for="fZip">Zip code (used if no address above)</label>
         <input type="text" id="fZip" placeholder="74012" inputmode="numeric" />
       </div>
       <div class="field">
-        <label for="fRadius">Search radius (mi)</label>
+        <label for="fRadius">Radius in miles (only applies with an address)</label>
         <input type="number" id="fRadius" placeholder="10" min="1" max="50" />
       </div>
       <div class="field">

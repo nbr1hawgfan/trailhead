@@ -154,15 +154,18 @@ async function runSearch() {
 
   const params = new URLSearchParams();
   params.set('action', 'search');
+  const address = document.getElementById('fAddress').value.trim();
   const zip = document.getElementById('fZip').value.trim();
-  if (zip) {
+  if (address) {
+    params.set('address', address);
+    const radius = document.getElementById('fRadius').value.trim();
+    if (radius) params.set('radius', radius);
+  } else if (zip) {
     params.set('zip', zip);
   } else {
     params.set('city', cfg.city || 'Broken Arrow');
     params.set('state', cfg.state || 'OK');
   }
-  const radius = document.getElementById('fRadius').value.trim();
-  if (radius) params.set('radius', radius);
   const beds = document.getElementById('fBeds').value;
   if (beds !== '') params.set('bedrooms', beds);
   const maxRent = document.getElementById('fMaxRent').value.trim();
