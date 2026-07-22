@@ -23,16 +23,21 @@ const AMENITIES = [
 // ---------- IndexedDB ----------
 const DB_NAME = 'trailhead_db';
 const STORE = 'apartments';
+const PHOTO_STORE = 'photos';
 let dbPromise;
 
 function openDB() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
+    const req = indexedDB.open(DB_NAME, 2);
+    req.onupgradeneeded = (e) => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(PHOTO_STORE)) {
+        const photoStore = db.createObjectStore(PHOTO_STORE, { keyPath: 'id' });
+        photoStore.createIndex('by_apartment', 'apartmentId', { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -68,6 +73,89 @@ async function dbDelete(id) {
     tx.objectStore(STORE).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbAddPhoto(apartmentId, blob, caption) {
+  const db = await openDB();
+  const photo = { id: uid(), apartmentId, blob, caption: caption || '', addedDate: new Date().toISOString() };
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, 'readwrite');
+    tx.objectStore(PHOTO_STORE).put(photo);
+    tx.oncomplete = () => resolve(photo);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetPhotos(apartmentId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, 'readonly');
+    const idx = tx.objectStore(PHOTO_STORE).index('by_apartment');
+    const req = idx.getAll(IDBKeyRange.only(apartmentId));
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbUpdatePhotoCaption(photoId, caption) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, 'readwrite');
+    const store = tx.objectStore(PHOTO_STORE);
+    const getReq = store.get(photoId);
+    getReq.onsuccess = () => {
+      const photo = getReq.result;
+      if (photo) {
+        photo.caption = caption;
+        store.put(photo);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbDeletePhoto(photoId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, 'readwrite');
+    tx.objectStore(PHOTO_STORE).delete(photoId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbDeletePhotosForApartment(apartmentId) {
+  const photos = await dbGetPhotos(apartmentId);
+  await Promise.all(photos.map((p) => dbDeletePhoto(p.id)));
+}
+
+// Resize an image file down to a max dimension and compress it, to keep
+// IndexedDB storage reasonable for phone photos.
+function resizeImage(file, maxDim = 1280, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => { img.src = reader.result; };
+    reader.onerror = reject;
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxDim) {
+        height = Math.round(height * (maxDim / width));
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round(width * (maxDim / height));
+        height = maxDim;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -157,6 +245,7 @@ tabs.forEach((tab) => {
 // ---------- Editor modal ----------
 const editorModal = document.getElementById('editorModal');
 let editingId = null;
+let isNewEntry = false;
 
 function buildAmenityGrid(item) {
   const grid = document.getElementById('amenityGrid');
@@ -213,7 +302,8 @@ document.querySelectorAll('#editorModal input, #editorModal select, #editorModal
 });
 
 function openEditor(item) {
-  editingId = item ? item.id : null;
+  editingId = item ? item.id : uid();
+  isNewEntry = !item;
   document.getElementById('editorTitle').textContent = item ? 'Edit apartment' : 'Add apartment';
   document.getElementById('deleteBtn').style.display = item ? 'inline-block' : 'none';
 
@@ -239,17 +329,22 @@ function openEditor(item) {
 
   buildAmenityGrid(item);
   updateEditorTotal();
+  renderPhotoGrid();
   editorModal.classList.add('open');
   document.getElementById('fName').focus();
 }
 
-function closeEditor() {
+async function closeEditor(cancelled) {
+  if (cancelled && isNewEntry && editingId) {
+    await dbDeletePhotosForApartment(editingId);
+  }
   editorModal.classList.remove('open');
   editingId = null;
+  isNewEntry = false;
 }
 
 document.getElementById('addBtn').addEventListener('click', () => openEditor(null));
-document.getElementById('editorCancel').addEventListener('click', closeEditor);
+document.getElementById('editorCancel').addEventListener('click', () => closeEditor(true));
 
 document.getElementById('editorSave').addEventListener('click', async () => {
   const item = getFormItem();
@@ -257,24 +352,86 @@ document.getElementById('editorSave').addEventListener('click', async () => {
     showToast('Add at least a name or address');
     return;
   }
-  if (!editingId) item.savedDate = new Date().toISOString();
+  if (isNewEntry) item.savedDate = new Date().toISOString();
   else {
     const existing = (await dbGetAll()).find((i) => i.id === editingId);
     item.savedDate = existing?.savedDate || new Date().toISOString();
   }
   await dbPut(item);
-  closeEditor();
+  isNewEntry = false; // saved now — cancel/back-out no longer wipes its photos
+  closeEditor(false);
   showToast('Saved');
   renderList();
 });
 
 document.getElementById('deleteBtn').addEventListener('click', async () => {
   if (!editingId) return;
-  if (!confirm('Delete this apartment from your list?')) return;
+  if (!confirm('Delete this apartment and its photos from your list?')) return;
   await dbDelete(editingId);
-  closeEditor();
+  await dbDeletePhotosForApartment(editingId);
+  isNewEntry = false;
+  closeEditor(false);
   showToast('Removed');
   renderList();
+});
+
+// ---------- Photos ----------
+async function renderPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = '<div class="photo-empty-hint">Loading photos…</div>';
+  const photos = await dbGetPhotos(editingId);
+
+  if (!photos.length) {
+    grid.innerHTML = '<div class="photo-empty-hint">No photos yet.</div>';
+    return;
+  }
+
+  photos.sort((a, b) => new Date(a.addedDate) - new Date(b.addedDate));
+  grid.innerHTML = '';
+  photos.forEach((photo) => {
+    const url = URL.createObjectURL(photo.blob);
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = `
+      <img src="${url}" data-view-photo />
+      <button class="photo-remove" data-remove-photo="${escapeAttr(photo.id)}" aria-label="Remove photo">✕</button>
+    `;
+    div.querySelector('[data-view-photo]').addEventListener('click', () => openLightbox(url));
+    div.querySelector('[data-remove-photo]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await dbDeletePhoto(photo.id);
+      renderPhotoGrid();
+    });
+    grid.appendChild(div);
+  });
+}
+
+document.getElementById('fPhotoInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  showToast('Adding photo' + (files.length > 1 ? 's' : '') + '…');
+  for (const file of files) {
+    try {
+      const resized = await resizeImage(file);
+      await dbAddPhoto(editingId, resized);
+    } catch (err) {
+      console.error('Photo processing failed', err);
+    }
+  }
+  e.target.value = '';
+  renderPhotoGrid();
+  showToast('Photo' + (files.length > 1 ? 's' : '') + ' added');
+});
+
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightboxClose').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('open');
+});
+document.getElementById('lightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox') document.getElementById('lightbox').classList.remove('open');
 });
 
 // ---------- List view ----------
@@ -294,7 +451,15 @@ async function renderList() {
   }
 
   items.sort((a, b) => new Date(b.savedDate) - new Date(a.savedDate));
-  list.innerHTML = items.map(cardHTML).join('');
+
+  const covers = await Promise.all(items.map(async (item) => {
+    const photos = await dbGetPhotos(item.id);
+    if (!photos.length) return null;
+    photos.sort((a, b) => new Date(a.addedDate) - new Date(b.addedDate));
+    return URL.createObjectURL(photos[0].blob);
+  }));
+
+  list.innerHTML = items.map((item, i) => cardHTML(item, covers[i])).join('');
 
   items.forEach((item) => {
     document.querySelector(`[data-open-id="${cssEscape(item.id)}"]`)
@@ -314,11 +479,12 @@ function updateSavedCount(n) {
 
 function cssEscape(str) { return String(str).replace(/([^a-zA-Z0-9_-])/g, '\\$1'); }
 
-function cardHTML(item) {
+function cardHTML(item, coverUrl) {
   const total = moveInTotal(item);
   const matchedAmenities = AMENITIES.filter(([key]) => item[key]).map(([, label]) => label);
   return `
   <div class="card" data-open-id="${escapeAttr(item.id)}" style="cursor:pointer;">
+    ${coverUrl ? `<img class="card-cover" src="${coverUrl}" alt="" />` : ''}
     <div class="card-top">
       <div>
         <div class="card-address">${escapeHTML(item.name || 'Untitled apartment')}</div>

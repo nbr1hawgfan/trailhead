@@ -136,6 +136,11 @@
     <div class="section-label">Features &amp; amenities</div>
     <div class="amenity-grid" id="amenityGrid"></div>
 
+    <div class="section-label">Photos</div>
+    <p class="help-text" style="margin-bottom:8px;">Handy during a tour — snap a photo of each room, the parking situation, or anything you want to remember.</p>
+    <input type="file" id="fPhotoInput" accept="image/*" capture="environment" multiple style="margin-bottom:10px;" />
+    <div class="photo-grid" id="photoGrid"></div>
+
     <div class="section-label">Pros &amp; cons</div>
     <div class="pros-cons">
       <div class="field">
@@ -167,6 +172,11 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">✕</button>
+  <img id="lightboxImg" alt="Apartment photo" />
+</div>
 
 <script src="app.js"></script>
 </body>

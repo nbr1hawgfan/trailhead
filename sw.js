@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trailhead-v1';
+const CACHE_NAME = 'trailhead-v2';
 const APP_SHELL = [
   './',
   './index.html',
