@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Trailhead — Apartment Finder</title>
-<meta name="theme-color" content="#2c3e52" />
+<title>Trailhead — Apartment Tracker</title>
+<meta name="theme-color" content="#003595" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
@@ -16,62 +16,24 @@
   <div class="horizon-mark" aria-hidden="true"></div>
   <div class="titles">
     <h1>Trailhead</h1>
-    <div class="subtitle" id="locationSubtitle">Broken Arrow, OK</div>
+    <div class="subtitle">Broken Arrow, OK apartment tracker</div>
   </div>
-  <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
 </header>
 
 <hr class="horizon-divider" />
 
 <nav class="tabs" role="tablist">
-  <button class="tab active" data-view="search" role="tab">Search</button>
-  <button class="tab" data-view="saved" role="tab">Saved <span class="count" id="savedCount">0</span></button>
+  <button class="tab active" data-view="list" role="tab">My List <span class="count" id="savedCount">0</span></button>
   <button class="tab" data-view="compare" role="tab">Compare</button>
 </nav>
 
 <main>
 
-  <!-- SEARCH VIEW -->
-  <section class="view active" id="view-search">
-    <div class="filter-bar">
-      <div class="field field-full">
-        <label for="fAddress">Search near this address (optional)</label>
-        <input type="text" id="fAddress" placeholder="e.g. a workplace or school address" />
-      </div>
-      <div class="field">
-        <label for="fZip">Zip code (used if no address above)</label>
-        <input type="text" id="fZip" placeholder="74012" inputmode="numeric" />
-      </div>
-      <div class="field">
-        <label for="fRadius">Radius in miles (only applies with an address)</label>
-        <input type="number" id="fRadius" placeholder="10" min="1" max="50" />
-      </div>
-      <div class="field">
-        <label for="fBeds">Bedrooms</label>
-        <select id="fBeds">
-          <option value="">Any</option>
-          <option value="0">Studio</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4+</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="fMaxRent">Max rent</label>
-        <input type="number" id="fMaxRent" placeholder="1500" min="0" step="25" />
-      </div>
-      <div class="field field-full">
-        <button class="btn-primary" id="searchBtn" style="width:100%;">Search listings</button>
-      </div>
+  <!-- LIST VIEW -->
+  <section class="view active" id="view-list">
+    <div style="text-align:right; margin-bottom:14px;">
+      <button class="btn-primary" id="addBtn">+ Add apartment</button>
     </div>
-
-    <div id="searchStatus"></div>
-    <div id="searchResults"></div>
-  </section>
-
-  <!-- SAVED VIEW -->
-  <section class="view" id="view-saved">
     <div id="savedList"></div>
   </section>
 
@@ -82,29 +44,124 @@
 
 </main>
 
-<!-- SETTINGS MODAL -->
-<div class="modal-backdrop" id="settingsModal">
+<!-- APARTMENT EDITOR MODAL -->
+<div class="modal-backdrop" id="editorModal">
   <div class="modal">
-    <h2>Settings</h2>
-    <p class="help-text">
-      Trailhead pulls live listings through a small Google Apps Script proxy that
-      keeps the RentCast API key private. Paste your deployed proxy's web app URL below.
-    </p>
-    <div class="field">
-      <label for="proxyUrl">Proxy web app URL</label>
-      <input type="text" id="proxyUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+    <h2 id="editorTitle">Add apartment</h2>
+    <p class="help-text">Fill in what you know now — you can always come back and add more later.</p>
+
+    <div class="fields-grid">
+      <div class="field field-full">
+        <label for="fName">Property name</label>
+        <input type="text" id="fName" placeholder="e.g. The Reserve at Battle Creek" />
+      </div>
+      <div class="field field-full">
+        <label for="fWebsite">Website link</label>
+        <input type="text" id="fWebsite" placeholder="https://…" />
+      </div>
+      <div class="field field-full">
+        <label for="fAddress">Address</label>
+        <input type="text" id="fAddress" placeholder="Street, city, state, zip" />
+      </div>
+
+      <div class="field">
+        <label for="fRent">Monthly rent</label>
+        <input type="number" id="fRent" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fLeaseTerm">Lease term</label>
+        <select id="fLeaseTerm">
+          <option value="">Not sure yet</option>
+          <option value="Month-to-month">Month-to-month</option>
+          <option value="3 months">3 months</option>
+          <option value="6 months">6 months</option>
+          <option value="9 months">9 months</option>
+          <option value="12 months">12 months</option>
+          <option value="Other">Other (note below)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fBeds">Bedrooms</label>
+        <input type="number" id="fBeds" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fBaths">Bathrooms</label>
+        <input type="number" id="fBaths" step="0.5" min="0" />
+      </div>
+      <div class="field">
+        <label for="fSqft">Square footage</label>
+        <input type="number" id="fSqft" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fStatus">Status</label>
+        <select id="fStatus">
+          <option value="interested">Interested</option>
+          <option value="toured">Toured</option>
+          <option value="applied">Applied</option>
+          <option value="rejected">Passed / rejected</option>
+        </select>
+      </div>
     </div>
-    <div class="field">
-      <label for="defaultCity">Default city</label>
-      <input type="text" id="defaultCity" placeholder="Broken Arrow" />
+
+    <div class="section-label">Move-in costs</div>
+    <div class="fields-grid">
+      <div class="field">
+        <label for="fDeposit">Security deposit</label>
+        <input type="number" id="fDeposit" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fAppFee">Application fee</label>
+        <input type="number" id="fAppFee" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fPetFee">Pet fee / deposit</label>
+        <input type="number" id="fPetFee" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label for="fUtilities">Utility setup est.</label>
+        <input type="number" id="fUtilities" step="1" min="0" />
+      </div>
+      <div class="field field-full">
+        <label for="fOtherFees">Other fees (admin, parking, etc.)</label>
+        <input type="number" id="fOtherFees" step="1" min="0" />
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="fFirstMonth" style="width:auto; margin-right:6px;" />First month due at signing</label>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="fLastMonth" style="width:auto; margin-right:6px;" />Last month due at signing</label>
+      </div>
     </div>
-    <div class="field">
-      <label for="defaultState">Default state (2-letter)</label>
-      <input type="text" id="defaultState" placeholder="OK" maxlength="2" />
+
+    <div class="section-label">Features &amp; amenities</div>
+    <div class="amenity-grid" id="amenityGrid"></div>
+
+    <div class="section-label">Pros &amp; cons</div>
+    <div class="pros-cons">
+      <div class="field">
+        <label for="fPros">Pros (one per line)</label>
+        <textarea id="fPros" placeholder="Close to work&#10;New appliances"></textarea>
+      </div>
+      <div class="field">
+        <label for="fCons">Cons (one per line)</label>
+        <textarea id="fCons" placeholder="No dishwasher&#10;Busy street"></textarea>
+      </div>
     </div>
+
+    <div class="section-label">Notes</div>
+    <div class="field">
+      <textarea id="fNotes" placeholder="Contact name, tour impressions, move-in specials…"></textarea>
+    </div>
+
+    <div class="total-banner">
+      <span class="label">Estimated total to move in</span>
+      <span class="value" id="editorTotal">$0</span>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn-secondary" id="settingsCancel">Cancel</button>
-      <button class="btn-primary" id="settingsSave">Save</button>
+      <button class="btn-text" id="deleteBtn" style="margin-right:auto;">Delete</button>
+      <button class="btn-secondary" id="editorCancel">Cancel</button>
+      <button class="btn-primary" id="editorSave">Save</button>
     </div>
   </div>
 </div>

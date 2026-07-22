@@ -28,11 +28,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache calls to the RentCast proxy — always go live for listings.
-  if (url.hostname.includes('script.google.com')) {
-    return;
-  }
-
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;

@@ -1,16 +1,24 @@
-// ---------- Config (localStorage) ----------
-const CONFIG_KEY = 'trailhead_config_v1';
-
-function getConfig() {
-  try {
-    return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-function saveConfig(cfg) {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
-}
+// ---------- Amenities checklist ----------
+const AMENITIES = [
+  ['washerDryerInUnit', 'Washer/dryer in unit'],
+  ['washerDryerHookup', 'Washer/dryer hookups'],
+  ['dishwasher', 'Dishwasher'],
+  ['centralAC', 'Central A/C'],
+  ['windowAC', 'Window A/C unit only'],
+  ['assignedParking', 'Assigned parking'],
+  ['garage', 'Garage available'],
+  ['petFriendly', 'Pet friendly'],
+  ['utilitiesIncluded', 'Utilities included'],
+  ['furnished', 'Furnished'],
+  ['elevatorNoStairs', 'Elevator / no stairs'],
+  ['balconyPatio', 'Balcony or patio'],
+  ['storageUnit', 'On-site storage unit'],
+  ['gatedSecurity', 'Gated / controlled access'],
+  ['onsiteLaundry', 'On-site laundry facility'],
+  ['onlinePortal', 'Online rent portal'],
+  ['pool', 'Pool'],
+  ['fitnessCenter', 'Fitness center']
+];
 
 // ---------- IndexedDB ----------
 const DB_NAME = 'trailhead_db';
@@ -97,6 +105,41 @@ function moveInTotal(item) {
   );
 }
 
+function linesToArray(text) {
+  return String(text || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function normalizeUrl(url) {
+  const trimmed = String(url || '').trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return 'https://' + trimmed;
+}
+
+function statusLabel(status) {
+  return { interested: 'Interested', toured: 'Toured', applied: 'Applied', rejected: 'Passed' }[status] || 'Interested';
+}
+
+function escapeHTML(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function escapeAttr(str) { return escapeHTML(str); }
+
+function emptyState(title, body, showAddBtn) {
+  return `
+  <div class="empty-state">
+    <div class="horizon-mark"></div>
+    <h3>${escapeHTML(title)}</h3>
+    <p>${escapeHTML(body)}</p>
+    ${showAddBtn ? '<div style="margin-top:16px;"><button class="btn-primary" id="emptyAddBtn">+ Add your first apartment</button></div>' : ''}
+  </div>`;
+}
+
 // ---------- Tabs ----------
 const tabs = document.querySelectorAll('.tab');
 const views = document.querySelectorAll('.view');
@@ -106,212 +149,156 @@ tabs.forEach((tab) => {
     views.forEach((v) => v.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('view-' + tab.dataset.view).classList.add('active');
-    if (tab.dataset.view === 'saved') renderSaved();
+    if (tab.dataset.view === 'list') renderList();
     if (tab.dataset.view === 'compare') renderCompare();
   });
 });
 
-// ---------- Settings modal ----------
-const settingsModal = document.getElementById('settingsModal');
-document.getElementById('settingsBtn').addEventListener('click', () => {
-  const cfg = getConfig();
-  document.getElementById('proxyUrl').value = cfg.proxyUrl || '';
-  document.getElementById('defaultCity').value = cfg.city || 'Broken Arrow';
-  document.getElementById('defaultState').value = cfg.state || 'OK';
-  settingsModal.classList.add('open');
-});
-document.getElementById('settingsCancel').addEventListener('click', () => {
-  settingsModal.classList.remove('open');
-});
-document.getElementById('settingsSave').addEventListener('click', () => {
-  const cfg = {
-    proxyUrl: document.getElementById('proxyUrl').value.trim(),
-    city: document.getElementById('defaultCity').value.trim() || 'Broken Arrow',
-    state: (document.getElementById('defaultState').value.trim() || 'OK').toUpperCase()
-  };
-  saveConfig(cfg);
-  document.getElementById('locationSubtitle').textContent = cfg.city + ', ' + cfg.state;
-  settingsModal.classList.remove('open');
-  showToast('Settings saved');
+// ---------- Editor modal ----------
+const editorModal = document.getElementById('editorModal');
+let editingId = null;
+
+function buildAmenityGrid(item) {
+  const grid = document.getElementById('amenityGrid');
+  grid.innerHTML = AMENITIES.map(([key, label]) => `
+    <label class="amenity-item ${item && item[key] ? 'checked' : ''}" data-amenity-item>
+      <input type="checkbox" data-amenity="${key}" ${item && item[key] ? 'checked' : ''} />
+      ${escapeHTML(label)}
+    </label>`).join('');
+
+  grid.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      cb.closest('.amenity-item').classList.toggle('checked', cb.checked);
+    });
+  });
+}
+
+function getFormItem() {
+  const item = { id: editingId || uid() };
+  item.name = document.getElementById('fName').value.trim();
+  item.website = normalizeUrl(document.getElementById('fWebsite').value);
+  item.address = document.getElementById('fAddress').value.trim();
+  item.rent = document.getElementById('fRent').value;
+  item.leaseTerm = document.getElementById('fLeaseTerm').value;
+  item.beds = document.getElementById('fBeds').value;
+  item.baths = document.getElementById('fBaths').value;
+  item.sqft = document.getElementById('fSqft').value;
+  item.status = document.getElementById('fStatus').value;
+  item.deposit = document.getElementById('fDeposit').value;
+  item.appFee = document.getElementById('fAppFee').value;
+  item.petFee = document.getElementById('fPetFee').value;
+  item.utilitiesEst = document.getElementById('fUtilities').value;
+  item.otherFees = document.getElementById('fOtherFees').value;
+  item.firstMonthDue = document.getElementById('fFirstMonth').checked;
+  item.lastMonthDue = document.getElementById('fLastMonth').checked;
+  item.pros = linesToArray(document.getElementById('fPros').value);
+  item.cons = linesToArray(document.getElementById('fCons').value);
+  item.notes = document.getElementById('fNotes').value.trim();
+
+  document.querySelectorAll('#amenityGrid input[type="checkbox"]').forEach((cb) => {
+    item[cb.dataset.amenity] = cb.checked;
+  });
+
+  return item;
+}
+
+function updateEditorTotal() {
+  const item = getFormItem();
+  document.getElementById('editorTotal').textContent = money(moveInTotal(item));
+}
+
+document.querySelectorAll('#editorModal input, #editorModal select, #editorModal textarea').forEach((el) => {
+  el.addEventListener('input', updateEditorTotal);
+  el.addEventListener('change', updateEditorTotal);
 });
 
-// ---------- Search ----------
-document.getElementById('searchBtn').addEventListener('click', runSearch);
+function openEditor(item) {
+  editingId = item ? item.id : null;
+  document.getElementById('editorTitle').textContent = item ? 'Edit apartment' : 'Add apartment';
+  document.getElementById('deleteBtn').style.display = item ? 'inline-block' : 'none';
 
-async function runSearch() {
-  const cfg = getConfig();
-  const statusEl = document.getElementById('searchStatus');
-  const resultsEl = document.getElementById('searchResults');
+  document.getElementById('fName').value = item?.name || '';
+  document.getElementById('fWebsite').value = item?.website || '';
+  document.getElementById('fAddress').value = item?.address || '';
+  document.getElementById('fRent').value = item?.rent ?? '';
+  document.getElementById('fLeaseTerm').value = item?.leaseTerm || '';
+  document.getElementById('fBeds').value = item?.beds ?? '';
+  document.getElementById('fBaths').value = item?.baths ?? '';
+  document.getElementById('fSqft').value = item?.sqft ?? '';
+  document.getElementById('fStatus').value = item?.status || 'interested';
+  document.getElementById('fDeposit').value = item?.deposit ?? '';
+  document.getElementById('fAppFee').value = item?.appFee ?? '';
+  document.getElementById('fPetFee').value = item?.petFee ?? '';
+  document.getElementById('fUtilities').value = item?.utilitiesEst ?? '';
+  document.getElementById('fOtherFees').value = item?.otherFees ?? '';
+  document.getElementById('fFirstMonth').checked = item ? !!item.firstMonthDue : true;
+  document.getElementById('fLastMonth').checked = item ? !!item.lastMonthDue : false;
+  document.getElementById('fPros').value = (item?.pros || []).join('\n');
+  document.getElementById('fCons').value = (item?.cons || []).join('\n');
+  document.getElementById('fNotes').value = item?.notes || '';
 
-  if (!cfg.proxyUrl) {
-    statusEl.innerHTML = emptyState(
-      'Connect your proxy first',
-      'Open Settings (⚙) and paste the Google Apps Script web app URL for the RentCast proxy.'
-    );
-    resultsEl.innerHTML = '';
+  buildAmenityGrid(item);
+  updateEditorTotal();
+  editorModal.classList.add('open');
+  document.getElementById('fName').focus();
+}
+
+function closeEditor() {
+  editorModal.classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById('addBtn').addEventListener('click', () => openEditor(null));
+document.getElementById('editorCancel').addEventListener('click', closeEditor);
+
+document.getElementById('editorSave').addEventListener('click', async () => {
+  const item = getFormItem();
+  if (!item.name && !item.address) {
+    showToast('Add at least a name or address');
     return;
   }
-
-  const params = new URLSearchParams();
-  params.set('action', 'search');
-  const address = document.getElementById('fAddress').value.trim();
-  const zip = document.getElementById('fZip').value.trim();
-  if (address) {
-    params.set('address', address);
-    const radius = document.getElementById('fRadius').value.trim();
-    if (radius) params.set('radius', radius);
-  } else if (zip) {
-    params.set('zip', zip);
-  } else {
-    params.set('city', cfg.city || 'Broken Arrow');
-    params.set('state', cfg.state || 'OK');
+  if (!editingId) item.savedDate = new Date().toISOString();
+  else {
+    const existing = (await dbGetAll()).find((i) => i.id === editingId);
+    item.savedDate = existing?.savedDate || new Date().toISOString();
   }
-  const beds = document.getElementById('fBeds').value;
-  if (beds !== '') params.set('bedrooms', beds);
-  const maxRent = document.getElementById('fMaxRent').value.trim();
-  if (maxRent) params.set('maxRent', maxRent);
-
-  statusEl.innerHTML = '<div class="loading-row"><span class="spinner"></span> Searching live listings…</div>';
-  resultsEl.innerHTML = '';
-
-  try {
-    const res = await fetch(cfg.proxyUrl + '?' + params.toString());
-    if (!res.ok) throw new Error('Proxy returned ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    statusEl.innerHTML = '';
-    if (!data.length) {
-      resultsEl.innerHTML = emptyState(
-        'No listings matched',
-        'Try widening the radius, clearing the rent cap, or removing the bedroom filter.'
-      );
-      return;
-    }
-
-    document.getElementById('searchStatus').outerHTML =
-      '<div class="results-meta" id="searchStatus">' + data.length + ' listing' + (data.length === 1 ? '' : 's') + ' found</div>';
-
-    const saved = await dbGetAll();
-    const savedIds = new Set(saved.map((s) => s.id));
-
-    resultsEl.innerHTML = data.map((l) => listingCardHTML(l, savedIds.has(l.id))).join('');
-
-    resultsEl.querySelectorAll('[data-save-id]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const listing = data.find((d) => d.id === btn.dataset.saveId);
-        await saveListing(listing);
-        btn.textContent = 'Saved ✓';
-        btn.disabled = true;
-        updateSavedCount();
-      });
-    });
-  } catch (err) {
-    statusEl.innerHTML = emptyState('Search failed', String(err.message || err));
-  }
-}
-
-function listingCardHTML(l, alreadySaved) {
-  return `
-  <div class="card">
-    <div class="card-top">
-      <div>
-        <div class="card-address">${escapeHTML(l.address || 'Address unavailable')}</div>
-        <div class="card-sub">${escapeHTML(l.city || '')}, ${escapeHTML(l.state || '')} ${escapeHTML(l.zip || '')}</div>
-      </div>
-      <div class="card-rent">${money(l.rent)}<span>/ month</span></div>
-    </div>
-    <div class="stat-row">
-      <span><span class="stat-value">${l.beds != null ? l.beds : '—'}</span> bed</span>
-      <span><span class="stat-value">${l.baths != null ? l.baths : '—'}</span> bath</span>
-      <span><span class="stat-value">${l.sqft != null ? l.sqft.toLocaleString() : '—'}</span> sqft</span>
-      ${l.daysOnMarket != null ? `<span><span class="stat-value">${l.daysOnMarket}</span> days listed</span>` : ''}
-    </div>
-    <div class="card-actions">
-      <button class="btn-primary" data-save-id="${escapeAttr(l.id)}" ${alreadySaved ? 'disabled' : ''}>${alreadySaved ? 'Saved ✓' : 'Save to tracker'}</button>
-      ${l.listingUrl ? `<a class="btn-secondary" href="${escapeAttr(l.listingUrl)}" target="_blank" rel="noopener">View listing</a>` : ''}
-    </div>
-  </div>`;
-}
-
-async function saveListing(listing) {
-  const item = {
-    id: listing.id,
-    address: listing.address,
-    city: listing.city,
-    state: listing.state,
-    zip: listing.zip,
-    rent: listing.rent,
-    beds: listing.beds,
-    baths: listing.baths,
-    sqft: listing.sqft,
-    listingUrl: listing.listingUrl,
-    status: 'interested',
-    deposit: listing.rent || '',
-    appFee: '',
-    petFee: '',
-    utilitiesEst: '',
-    otherFees: '',
-    firstMonthDue: true,
-    lastMonthDue: false,
-    notes: '',
-    manual: false,
-    savedDate: new Date().toISOString()
-  };
   await dbPut(item);
-  showToast('Saved to tracker');
-}
+  closeEditor();
+  showToast('Saved');
+  renderList();
+});
 
-// ---------- Saved / tracker view ----------
-async function renderSaved() {
+document.getElementById('deleteBtn').addEventListener('click', async () => {
+  if (!editingId) return;
+  if (!confirm('Delete this apartment from your list?')) return;
+  await dbDelete(editingId);
+  closeEditor();
+  showToast('Removed');
+  renderList();
+});
+
+// ---------- List view ----------
+async function renderList() {
   const list = document.getElementById('savedList');
   const items = await dbGetAll();
   updateSavedCount(items.length);
 
   if (!items.length) {
-    list.innerHTML =
-      emptyState('Nothing saved yet', 'Search for listings or add one manually to start tracking costs.') +
-      `<div style="text-align:center; margin-top:14px;">
-         <button class="btn-secondary" id="addManualBtn">+ Add manually</button>
-       </div>`;
-    document.getElementById('addManualBtn').addEventListener('click', addManualListing);
+    list.innerHTML = emptyState(
+      'Nothing saved yet',
+      'Add an apartment to start tracking cost, features, and your own notes.',
+      true
+    );
+    document.getElementById('emptyAddBtn')?.addEventListener('click', () => openEditor(null));
     return;
   }
 
   items.sort((a, b) => new Date(b.savedDate) - new Date(a.savedDate));
-
-  list.innerHTML =
-    `<div style="text-align:right; margin-bottom:12px;">
-       <button class="btn-secondary" id="addManualBtn">+ Add manually</button>
-     </div>` +
-    items.map(savedCardHTML).join('');
-
-  document.getElementById('addManualBtn').addEventListener('click', addManualListing);
+  list.innerHTML = items.map(cardHTML).join('');
 
   items.forEach((item) => {
-    const card = list.querySelector(`[data-card-id="${cssEscape(item.id)}"]`);
-    if (!card) return;
-
-    card.querySelectorAll('[data-field]').forEach((input) => {
-      input.addEventListener('input', () => {
-        const field = input.dataset.field;
-        let val = input.type === 'checkbox' ? input.checked : input.value;
-        item[field] = val;
-        dbPut(item);
-        card.querySelector('.total-banner .value').textContent = money(moveInTotal(item));
-      });
-    });
-
-    card.querySelector('[data-status]').addEventListener('change', (e) => {
-      item.status = e.target.value;
-      dbPut(item);
-    });
-
-    card.querySelector('[data-delete]').addEventListener('click', async () => {
-      if (!confirm('Remove this apartment from your tracker?')) return;
-      await dbDelete(item.id);
-      renderSaved();
-    });
+    document.querySelector(`[data-open-id="${cssEscape(item.id)}"]`)
+      ?.addEventListener('click', () => openEditor(item));
   });
 }
 
@@ -325,15 +312,19 @@ function updateSavedCount(n) {
   });
 }
 
-function savedCardHTML(item) {
+function cssEscape(str) { return String(str).replace(/([^a-zA-Z0-9_-])/g, '\\$1'); }
+
+function cardHTML(item) {
   const total = moveInTotal(item);
+  const matchedAmenities = AMENITIES.filter(([key]) => item[key]).map(([, label]) => label);
   return `
-  <div class="card saved-card" data-card-id="${escapeAttr(item.id)}">
+  <div class="card" data-open-id="${escapeAttr(item.id)}" style="cursor:pointer;">
     <div class="card-top">
       <div>
-        <div class="card-address">${escapeHTML(item.address || 'Untitled listing')}</div>
-        <div class="card-sub">${escapeHTML(item.city || '')}${item.city ? ', ' : ''}${escapeHTML(item.state || '')}
-          ${item.listingUrl ? ` · <a href="${escapeAttr(item.listingUrl)}" target="_blank" rel="noopener">listing ↗</a>` : ''}
+        <div class="card-address">${escapeHTML(item.name || 'Untitled apartment')}</div>
+        <div class="card-sub">
+          ${escapeHTML(item.address || 'No address yet')}
+          ${item.website ? ` · <a href="${escapeAttr(item.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">website ↗</a>` : ''}
         </div>
       </div>
       <span class="badge badge-${item.status}">${statusLabel(item.status)}</span>
@@ -341,98 +332,19 @@ function savedCardHTML(item) {
 
     <div class="stat-row">
       <span><span class="stat-value">${money(item.rent)}</span> rent</span>
-      <span><span class="stat-value">${item.beds != null && item.beds !== '' ? item.beds : '—'}</span> bed</span>
-      <span><span class="stat-value">${item.baths != null && item.baths !== '' ? item.baths : '—'}</span> bath</span>
+      <span><span class="stat-value">${item.beds !== '' && item.beds != null ? item.beds : '—'}</span> bed</span>
+      <span><span class="stat-value">${item.baths !== '' && item.baths != null ? item.baths : '—'}</span> bath</span>
       <span><span class="stat-value">${item.sqft ? Number(item.sqft).toLocaleString() : '—'}</span> sqft</span>
+      <span><span class="stat-value">${item.leaseTerm || '—'}</span></span>
     </div>
 
-    <div class="fields-grid">
-      <div class="field">
-        <label>Status</label>
-        <select data-status>
-          <option value="interested" ${item.status === 'interested' ? 'selected' : ''}>Interested</option>
-          <option value="toured" ${item.status === 'toured' ? 'selected' : ''}>Toured</option>
-          <option value="applied" ${item.status === 'applied' ? 'selected' : ''}>Applied</option>
-          <option value="rejected" ${item.status === 'rejected' ? 'selected' : ''}>Passed / rejected</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Monthly rent</label>
-        <input type="number" data-field="rent" value="${item.rent ?? ''}" step="1" />
-      </div>
-      <div class="field">
-        <label>Security deposit</label>
-        <input type="number" data-field="deposit" value="${item.deposit ?? ''}" step="1" />
-      </div>
-      <div class="field">
-        <label>Application fee</label>
-        <input type="number" data-field="appFee" value="${item.appFee ?? ''}" step="1" />
-      </div>
-      <div class="field">
-        <label>Pet fee / deposit</label>
-        <input type="number" data-field="petFee" value="${item.petFee ?? ''}" step="1" />
-      </div>
-      <div class="field">
-        <label>Utility setup est.</label>
-        <input type="number" data-field="utilitiesEst" value="${item.utilitiesEst ?? ''}" step="1" />
-      </div>
-      <div class="field field-full">
-        <label>Other move-in fees (admin, parking, etc.)</label>
-        <input type="number" data-field="otherFees" value="${item.otherFees ?? ''}" step="1" />
-      </div>
-      <div class="field">
-        <label><input type="checkbox" data-field="firstMonthDue" ${item.firstMonthDue ? 'checked' : ''} style="width:auto; margin-right:6px;" />First month due at signing</label>
-      </div>
-      <div class="field">
-        <label><input type="checkbox" data-field="lastMonthDue" ${item.lastMonthDue ? 'checked' : ''} style="width:auto; margin-right:6px;" />Last month due at signing</label>
-      </div>
-      <div class="field field-full">
-        <label>Notes</label>
-        <textarea data-field="notes" placeholder="Move-in specials, contact name, tour impressions…">${escapeHTML(item.notes || '')}</textarea>
-      </div>
-    </div>
+    ${matchedAmenities.length ? `<div class="card-sub">${matchedAmenities.slice(0, 4).map(escapeHTML).join(' · ')}${matchedAmenities.length > 4 ? ` +${matchedAmenities.length - 4} more` : ''}</div>` : ''}
 
     <div class="total-banner">
       <span class="label">Estimated total to move in</span>
       <span class="value">${money(total)}</span>
     </div>
-
-    <div class="card-actions">
-      <button class="btn-text" data-delete>Remove from tracker</button>
-    </div>
   </div>`;
-}
-
-function statusLabel(status) {
-  return { interested: 'Interested', toured: 'Toured', applied: 'Applied', rejected: 'Passed' }[status] || 'Interested';
-}
-
-async function addManualListing() {
-  const item = {
-    id: uid(),
-    address: 'New listing — tap to edit address in notes',
-    city: getConfig().city || 'Broken Arrow',
-    state: getConfig().state || 'OK',
-    zip: '',
-    rent: '',
-    beds: '',
-    baths: '',
-    sqft: '',
-    listingUrl: '',
-    status: 'interested',
-    deposit: '',
-    appFee: '',
-    petFee: '',
-    utilitiesEst: '',
-    otherFees: '',
-    firstMonthDue: true,
-    lastMonthDue: false,
-    notes: '',
-    manual: true,
-    savedDate: new Date().toISOString()
-  };
-  await dbPut(item);
-  renderSaved();
 }
 
 // ---------- Compare view ----------
@@ -442,8 +354,8 @@ async function renderCompare() {
 
   if (items.length < 2) {
     content.innerHTML = emptyState(
-      'Save at least two apartments',
-      'Compare rent, size, and total move-in cost side by side once you have a couple saved.'
+      'Add at least two apartments',
+      'Compare rent, size, move-in cost, and features side by side once you have a couple saved.'
     );
     return;
   }
@@ -451,15 +363,19 @@ async function renderCompare() {
   const withTotals = items.map((i) => ({ ...i, total: moveInTotal(i) }));
   const lowestTotal = Math.min(...withTotals.map((i) => i.total));
 
+  const keyAmenities = ['washerDryerInUnit', 'dishwasher', 'centralAC', 'petFriendly', 'utilitiesIncluded', 'garage'];
+  const amenityLabelMap = Object.fromEntries(AMENITIES);
+
   const rows = withTotals
     .sort((a, b) => a.total - b.total)
     .map((i) => `
       <tr class="${i.total === lowestTotal ? 'best-value' : ''}">
-        <td>${escapeHTML(i.address || 'Untitled')}</td>
+        <td>${escapeHTML(i.name || i.address || 'Untitled')}</td>
         <td class="mono-cell">${money(i.rent)}</td>
         <td class="mono-cell">${i.sqft ? Number(i.sqft).toLocaleString() : '—'}</td>
         <td class="mono-cell">${i.rent && i.sqft ? '$' + (i.rent / i.sqft).toFixed(2) : '—'}</td>
         <td class="mono-cell total">${money(i.total)}</td>
+        ${keyAmenities.map((key) => `<td>${i[key] ? '<span class="amenity-tick">✓</span>' : '<span class="amenity-cross">–</span>'}</td>`).join('')}
         <td><span class="badge badge-${i.status}">${statusLabel(i.status)}</span></td>
       </tr>`)
     .join('');
@@ -469,44 +385,26 @@ async function renderCompare() {
       <table class="compare">
         <thead>
           <tr>
-            <th>Address</th>
+            <th>Name</th>
             <th>Rent</th>
             <th>Sqft</th>
             <th>$/sqft</th>
             <th>Move-in total</th>
+            ${keyAmenities.map((key) => `<th>${escapeHTML(amenityLabelMap[key])}</th>`).join('')}
             <th>Status</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <p class="card-sub" style="margin-top:10px;">Lowest total move-in cost highlighted in green.</p>
+    <p class="card-sub" style="margin-top:10px;">Lowest total move-in cost highlighted in green. Tap an apartment in "My List" to see its full feature checklist, pros/cons, and notes.</p>
   `;
 }
 
-// ---------- Helpers ----------
-function emptyState(title, body) {
-  return `
-  <div class="empty-state">
-    <div class="horizon-mark"></div>
-    <h3>${escapeHTML(title)}</h3>
-    <p>${escapeHTML(body)}</p>
-  </div>`;
-}
-
-function escapeHTML(str) {
-  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-function escapeAttr(str) { return escapeHTML(str); }
-function cssEscape(str) { return String(str).replace(/([^a-zA-Z0-9_-])/g, '\\$1'); }
-
 // ---------- Init ----------
 (function init() {
-  const cfg = getConfig();
-  document.getElementById('locationSubtitle').textContent = (cfg.city || 'Broken Arrow') + ', ' + (cfg.state || 'OK');
   updateSavedCount();
+  renderList();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
