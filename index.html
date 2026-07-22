@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Trailhead — Apartment Finder</title>
+<meta name="theme-color" content="#2c3e52" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="horizon-mark" aria-hidden="true"></div>
+  <div class="titles">
+    <h1>Trailhead</h1>
+    <div class="subtitle" id="locationSubtitle">Broken Arrow, OK</div>
+  </div>
+  <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
+</header>
+
+<hr class="horizon-divider" />
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-view="search" role="tab">Search</button>
+  <button class="tab" data-view="saved" role="tab">Saved <span class="count" id="savedCount">0</span></button>
+  <button class="tab" data-view="compare" role="tab">Compare</button>
+</nav>
+
+<main>
+
+  <!-- SEARCH VIEW -->
+  <section class="view active" id="view-search">
+    <div class="filter-bar">
+      <div class="field">
+        <label for="fZip">Zip code (optional)</label>
+        <input type="text" id="fZip" placeholder="74012" inputmode="numeric" />
+      </div>
+      <div class="field">
+        <label for="fRadius">Search radius (mi)</label>
+        <input type="number" id="fRadius" placeholder="10" min="1" max="50" />
+      </div>
+      <div class="field">
+        <label for="fBeds">Bedrooms</label>
+        <select id="fBeds">
+          <option value="">Any</option>
+          <option value="0">Studio</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4+</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fMaxRent">Max rent</label>
+        <input type="number" id="fMaxRent" placeholder="1500" min="0" step="25" />
+      </div>
+      <div class="field field-full">
+        <button class="btn-primary" id="searchBtn" style="width:100%;">Search listings</button>
+      </div>
+    </div>
+
+    <div id="searchStatus"></div>
+    <div id="searchResults"></div>
+  </section>
+
+  <!-- SAVED VIEW -->
+  <section class="view" id="view-saved">
+    <div id="savedList"></div>
+  </section>
+
+  <!-- COMPARE VIEW -->
+  <section class="view" id="view-compare">
+    <div id="compareContent"></div>
+  </section>
+
+</main>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <h2>Settings</h2>
+    <p class="help-text">
+      Trailhead pulls live listings through a small Google Apps Script proxy that
+      keeps the RentCast API key private. Paste your deployed proxy's web app URL below.
+    </p>
+    <div class="field">
+      <label for="proxyUrl">Proxy web app URL</label>
+      <input type="text" id="proxyUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+    </div>
+    <div class="field">
+      <label for="defaultCity">Default city</label>
+      <input type="text" id="defaultCity" placeholder="Broken Arrow" />
+    </div>
+    <div class="field">
+      <label for="defaultState">Default state (2-letter)</label>
+      <input type="text" id="defaultState" placeholder="OK" maxlength="2" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="settingsCancel">Cancel</button>
+      <button class="btn-primary" id="settingsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
