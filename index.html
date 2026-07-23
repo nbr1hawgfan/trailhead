@@ -4,17 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BA Apartment Tracker</title>
-<meta name="theme-color" content="#14161a">
+<meta name="theme-color" content="#12151c">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <style>
   :root{
-    --bg:#14161a; --surface:#1e2126; --surface-2:#262a31; --surface-3:#2f343c;
-    --text:#e8e6e1; --text-dim:#9aa0a6; --text-faint:#666b72;
-    --accent:#d4a24c; --accent-dim:#8a6f3a;
-    --sky:#5b7f95;
-    --good:#6b9e6e; --bad:#b5615a;
-    --border:#33383f;
+    /* TU Golden Hurricane palette: Old Gold, Royal Blue, Crimson */
+    --bg:#12151c; --surface:#1a2030; --surface-2:#212a3d; --surface-3:#2a3550;
+    --text:#f0ede4; --text-dim:#a3aebf; --text-faint:#6b7488;
+    --accent:#cfa935; --accent-dim:#8a7124;
+    --sky:#3a5ba0;
+    --crimson:#a32638;
+    --good:#5f9e6e; --bad:#c1495a;
+    --border:#2c374d;
     --radius:10px;
     --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-display: Georgia, "Times New Roman", ui-serif, serif;
@@ -31,6 +33,18 @@
   header.top .eyebrow{margin-bottom:2px;}
   header.top h1{font-size:22px; color:var(--text);}
   header.top .sub{color:var(--text-dim); font-size:13px; margin-top:2px;}
+  .top-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand-swirl{width:38px; height:38px; flex-shrink:0;}
+  .header-text{flex:1; min-width:0;}
+  .share-btn{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--accent); border-radius:8px;
+    width:38px; height:38px; flex-shrink:0; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .tu-ribbon{
+    display:flex; align-items:center; gap:6px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--crimson); font-weight:700; margin-top:4px;
+  }
+  .tu-ribbon .dot{width:5px; height:5px; border-radius:50%; background:var(--accent);}
   main{padding:0 14px 20px;}
   .view{display:none;}
   .view.active{display:block;}
@@ -173,9 +187,21 @@
 <body>
 
 <header class="top">
-  <div class="eyebrow" id="headerEyebrow">Broken Arrow, OK</div>
-  <h1 id="headerTitle">Apartment Tracker</h1>
-  <div class="sub" id="headerSub">Loading...</div>
+  <div class="top-row">
+    <svg class="brand-swirl" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#a32638" stroke-width="3"/>
+      <path d="M50 12 C 72 12, 88 28, 88 50 C 88 34, 74 22, 58 22 C 74 26, 82 40, 78 54 C 82 40, 74 26, 58 22" fill="none" stroke="#cfa935" stroke-width="6" stroke-linecap="round"/>
+      <path d="M50 88 C 28 88, 12 72, 12 50 C 12 66, 26 78, 42 78 C 26 74, 18 60, 22 46 C 18 60, 26 74, 42 78" fill="none" stroke="#3a5ba0" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="7" fill="#cfa935"/>
+    </svg>
+    <div class="header-text">
+      <div class="eyebrow" id="headerEyebrow">Broken Arrow, OK</div>
+      <h1 id="headerTitle">Apartment Tracker</h1>
+      <div class="tu-ribbon"><span class="dot"></span>Golden Hurricane Edition · TU Class Move</div>
+      <div class="sub" id="headerSub">Loading...</div>
+    </div>
+    <button class="share-btn" id="headerShareBtn" title="Share results">⤴</button>
+  </div>
 </header>
 
 <main>
@@ -208,8 +234,17 @@
     <div class="compare-scroll">
       <table class="compare" id="compareTable"></table>
     </div>
-    <div style="margin-top:16px;">
+    <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn block primary" id="shareResultsBtn">Share Results</button>
       <button class="btn block ghost" id="exportCsvBtn">Export CSV</button>
+      <div class="row" style="gap:10px;">
+        <button class="btn ghost" style="flex:1;" id="exportBackupBtn">Backup (JSON)</button>
+        <button class="btn ghost" style="flex:1;" id="importBackupBtn">Restore (JSON)</button>
+        <input type="file" id="importBackupInput" accept=".json" style="display:none;">
+      </div>
+      <p style="font-size:11px; color:var(--text-faint); line-height:1.5; margin:0;">
+        "Share Results" opens your phone's share sheet (text, email, AirDrop) with a summary. "Backup" saves a JSON file of everything — send it to your son (or yourself) and use "Restore" on his device to load the same list.
+      </p>
     </div>
   </div>
 
@@ -376,6 +411,11 @@ function seedListings(){
       amenities:["Pet Friendly"],
       url:"https://www.apartments.com/broken-arrow-ok/1-bedrooms/",
       notes:"Budget-friendly option, smaller floor plan. Seed data — verify all details directly with the property.", photos:[]},
+    {name:"Aspen Village", addr:"1947 W Houston St, Broken Arrow, OK 74012", price:1020, sqft:706, beds:1, baths:1,
+      appfee:60, deposit:200, commute:10, movein:"", status:"want",
+      amenities:["Pet Friendly","Fitness Center","Pool"],
+      url:"https://www.apartments.com/aspen-village-broken-arrow-ok/fgmz3sr/",
+      notes:"A friend already lives here — good one to ask about firsthand. Renovated community, pool, clubhouse w/ business center, playground, BBQ/picnic areas, built 1996. Seed data — verify current price and unit availability.", photos:[]},
   ];
   return seed.map(s => ({...s, id: uid(), createdAt: Date.now()}));
 }
@@ -687,6 +727,68 @@ function renderCompare(){
     renderCompare();
     renderListings();
   });
+});
+
+/* ---------- Share / Backup / Restore ---------- */
+function buildSummaryText(){
+  const scores = computeScores();
+  const sorted = [...listings].sort((a,b)=>(scores[b.id]||0)-(scores[a.id]||0));
+  let text = `Broken Arrow Apartment Search — Golden Hurricane Edition 🏈🌀\n\n`;
+  sorted.forEach((l,i)=>{
+    text += `${i+1}. ${l.name} — ${l.price?'$'+l.price.toLocaleString()+'/mo':'price TBD'}, ${l.sqft||'?'} sqft, ${l.beds}bd/${l.baths}ba\n`;
+    text += `   Score: ${scores[l.id]}/100 · Status: ${statusLabel(l.status)}\n`;
+    if(l.addr) text += `   ${l.addr}\n`;
+    if(l.amenities.length) text += `   Amenities: ${l.amenities.join(', ')}\n`;
+    text += `\n`;
+  });
+  return text;
+}
+async function shareResults(){
+  const text = buildSummaryText();
+  if(navigator.share){
+    try{ await navigator.share({title:'Broken Arrow Apartment Search', text}); return; }
+    catch(e){ /* user cancelled or unsupported, fall through to clipboard */ }
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Copied summary to clipboard');
+  }catch(e){
+    showToast('Could not share — try Export CSV instead');
+  }
+}
+document.getElementById('shareResultsBtn').addEventListener('click', shareResults);
+document.getElementById('headerShareBtn').addEventListener('click', shareResults);
+
+document.getElementById('exportBackupBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(listings, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ba-apartment-backup.json';
+  a.click();
+  showToast('Backup file downloaded');
+});
+document.getElementById('importBackupBtn').addEventListener('click', ()=> document.getElementById('importBackupInput').click());
+document.getElementById('importBackupInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data)) throw new Error('bad format');
+      if(confirm(`Import ${data.length} apartment(s)? This adds to your current list (won't delete existing ones).`)){
+        listings = listings.concat(data.map(d=>({...d, id: uid()})));
+        saveListings(listings);
+        renderListings();
+        renderCompare();
+        showToast('Backup restored');
+      }
+    }catch(err){
+      showToast('Could not read that file');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
 });
 
 /* ---------- CSV export ---------- */

@@ -1,12 +1,12 @@
 {
-  "name": "Broken Arrow Apartment Tracker",
+  "name": "Broken Arrow Apartment Tracker — Golden Hurricane Edition",
   "short_name": "BA Apartments",
   "description": "Track and compare apartments while searching in Broken Arrow, OK",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#14161a",
-  "theme_color": "#14161a",
+  "background_color": "#12151c",
+  "theme_color": "#12151c",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
