@@ -431,6 +431,21 @@ function seedListings(){
       amenities:["Washer/Dryer In-Unit","Granite Countertops","Stainless Appliances","Pet Friendly","Fitness Center","Pool"],
       url:"https://www.apartments.com/heritage-grove-broken-arrow-ok/ejv5z4m/",
       notes:"Brand new (built 2025), most upscale option — resort-style pool w/ cabanas, dog park, fire pit. Move-in specials have been running (up to 2 months free). Seed data — verify current price.", photos:[]},
+    {name:"Hickory Grove", addr:"1101 W Houston St, Broken Arrow, OK 74012", price:994, sqft:700, beds:1, baths:1,
+      appfee:50, deposit:250, commute:8, movein:"", status:"want",
+      amenities:["Dishwasher","Balcony / Patio","Pool","Pet Friendly"],
+      url:"https://www.apartments.com/hickory-grove-apartments-broken-arrow-ok/6d2wqer/",
+      notes:"Downtown BA location, recently renovated units (black appliances, new flooring). Mixed reviews on maintenance responsiveness — worth asking current residents about. Seed data — verify current price.", photos:[]},
+    {name:"Creekside Apartment Homes", addr:"2401 W Omaha St, Broken Arrow, OK 74012", price:1143, sqft:750, beds:1, baths:1,
+      appfee:75, deposit:250, commute:10, movein:"", status:"want",
+      amenities:["Gated Community","Pet Friendly"],
+      url:"https://www.apartments.com/broken-arrow-ok/",
+      notes:"Gated community. Total monthly price (incl. required fees) runs higher than base rent — ask for full fee breakdown. Seed data — verify current price.", photos:[]},
+    {name:"Charleston Crossing Apartments", addr:"4548 S Elm Pl, Broken Arrow, OK 74011", price:855, sqft:650, beds:1, baths:1,
+      appfee:50, deposit:150, commute:11, movein:"", status:"want",
+      amenities:["Pet Friendly"],
+      url:"https://www.apartments.com/broken-arrow-ok/",
+      notes:"One of the lowest starting 1BR rates found in Broken Arrow. Seed data — verify current price and confirm in-unit amenities directly.", photos:[]},
   ];
   return seed.map(s => ({...s, id: uid(), createdAt: Date.now()}));
 }
