@@ -31,7 +31,24 @@
 
   <!-- LIST VIEW -->
   <section class="view active" id="view-list">
-    <div style="text-align:right; margin-bottom:14px;">
+
+    <div class="search-launcher">
+      <div class="section-label" style="margin-top:0;">Find apartments</div>
+      <p class="help-text" style="margin-bottom:8px;">
+        Opens results in a new tab (Google won't let sites embed its results directly) — then use "Paste from clipboard" below when adding one you like.
+      </p>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input type="text" id="searchQuery" placeholder="e.g. 2 bedroom pet friendly" />
+        <button class="btn-primary" id="googleSearchBtn" style="white-space:nowrap;">Search</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn-secondary" id="zillowBtn">Zillow</button>
+        <button class="btn-secondary" id="apartmentsComBtn">Apartments.com</button>
+        <button class="btn-secondary" id="realtorBtn">Realtor.com</button>
+      </div>
+    </div>
+
+    <div style="text-align:right; margin: 16px 0 14px;">
       <button class="btn-primary" id="addBtn">+ Add apartment</button>
     </div>
     <div id="savedList"></div>
@@ -57,7 +74,10 @@
       </div>
       <div class="field field-full">
         <label for="fWebsite">Website link</label>
-        <input type="text" id="fWebsite" placeholder="https://…" />
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="fWebsite" placeholder="https://…" style="flex:1;" />
+          <button type="button" class="btn-secondary" id="pasteLinkBtn" style="white-space:nowrap;">Paste link</button>
+        </div>
       </div>
       <div class="field field-full">
         <label for="fAddress">Address</label>

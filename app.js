@@ -346,6 +346,47 @@ async function closeEditor(cancelled) {
 document.getElementById('addBtn').addEventListener('click', () => openEditor(null));
 document.getElementById('editorCancel').addEventListener('click', () => closeEditor(true));
 
+// ---------- Search launcher ----------
+const DEFAULT_LOCATION = 'Broken Arrow OK';
+
+function openInNewTab(url) {
+  window.open(url, '_blank', 'noopener');
+}
+
+document.getElementById('googleSearchBtn').addEventListener('click', () => {
+  const q = document.getElementById('searchQuery').value.trim();
+  const query = (q ? q + ' ' : '') + 'apartments for rent ' + DEFAULT_LOCATION;
+  openInNewTab('https://www.google.com/search?q=' + encodeURIComponent(query));
+});
+document.getElementById('searchQuery').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('googleSearchBtn').click();
+});
+document.getElementById('zillowBtn').addEventListener('click', () => {
+  openInNewTab('https://www.zillow.com/broken-arrow-ok/rentals/');
+});
+document.getElementById('apartmentsComBtn').addEventListener('click', () => {
+  openInNewTab('https://www.apartments.com/broken-arrow-ok/');
+});
+document.getElementById('realtorBtn').addEventListener('click', () => {
+  openInNewTab('https://www.realtor.com/apartments/Broken-Arrow_OK');
+});
+
+// ---------- Paste link from clipboard ----------
+document.getElementById('pasteLinkBtn').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    const match = String(text || '').match(/https?:\/\/\S+/);
+    if (match) {
+      document.getElementById('fWebsite').value = match[0];
+      showToast('Link pasted');
+    } else {
+      showToast('No link found on clipboard');
+    }
+  } catch (err) {
+    showToast('Could not read clipboard — paste manually (long-press the field)');
+  }
+});
+
 document.getElementById('editorSave').addEventListener('click', async () => {
   const item = getFormItem();
   if (!item.name && !item.address) {
@@ -567,10 +608,34 @@ async function renderCompare() {
   `;
 }
 
+function openEditorFromShare(prefill) {
+  openEditor(null);
+  if (prefill.website) document.getElementById('fWebsite').value = prefill.website;
+  if (prefill.name) document.getElementById('fName').value = prefill.name;
+  updateEditorTotal();
+  showToast('Filled in from share');
+}
+
+function checkForSharedLink() {
+  const params = new URLSearchParams(window.location.search);
+  const sharedUrl = params.get('url');
+  const sharedText = params.get('text');
+  const sharedTitle = params.get('title');
+  if (!sharedUrl && !sharedText && !sharedTitle) return;
+
+  const urlMatch = (sharedUrl || sharedText || '').match(/https?:\/\/\S+/);
+  const website = sharedUrl || (urlMatch ? urlMatch[0] : '');
+  openEditorFromShare({ website, name: sharedTitle || '' });
+
+  // Clean the URL so refreshing doesn't reopen the same share
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
 // ---------- Init ----------
 (function init() {
   updateSavedCount();
   renderList();
+  checkForSharedLink();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

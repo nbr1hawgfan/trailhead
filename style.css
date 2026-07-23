@@ -436,7 +436,15 @@ table.compare tr.best-value td.mono-cell.total { color: var(--sage); font-weight
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
 
-/* Photos */
+/* Search launcher */
+.search-launcher {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.search-launcher .section-label { margin-top: 0; }
 .photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
