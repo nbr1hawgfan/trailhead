@@ -416,6 +416,21 @@ function seedListings(){
       amenities:["Pet Friendly","Fitness Center","Pool"],
       url:"https://www.apartments.com/aspen-village-broken-arrow-ok/fgmz3sr/",
       notes:"A friend already lives here — good one to ask about firsthand. Renovated community, pool, clubhouse w/ business center, playground, BBQ/picnic areas, built 1996. Seed data — verify current price and unit availability.", photos:[]},
+    {name:"Redbud Ranch", addr:"2701 N 23rd St, Broken Arrow, OK 74014", price:1134, sqft:789, beds:1, baths:1,
+      appfee:75, deposit:250, commute:9, movein:"", status:"want",
+      amenities:["Gated Community","Pet Friendly","Balcony / Patio","Walk-in Closet","Pool","Stainless Appliances"],
+      url:"https://www.apartments.com/redbud-ranch-broken-arrow-ok/ewcy81q/",
+      notes:"Newer build (2022), gated, dog park, courtyard pool, fitness center. Seed data — verify current price and availability.", photos:[]},
+    {name:"Hillside on Madison", addr:"512 E Madison St, Broken Arrow, OK 74012", price:879, sqft:600, beds:1, baths:1,
+      appfee:50, deposit:150, commute:11, movein:"", status:"want",
+      amenities:["Walk-in Closet","Pet Friendly"],
+      url:"https://www.apartments.com/hillside-on-madison-broken-arrow-ok/m7z7wel/",
+      notes:"Most budget-friendly option found so far. On-site laundry facilities (not necessarily in-unit) — confirm W/D setup directly. Seed data — verify all details.", photos:[]},
+    {name:"Heritage Grove", addr:"4610 S Aspen Ave, Broken Arrow, OK 74011", price:1289, sqft:778, beds:1, baths:1,
+      appfee:75, deposit:300, commute:15, movein:"", status:"want",
+      amenities:["Washer/Dryer In-Unit","Granite Countertops","Stainless Appliances","Pet Friendly","Fitness Center","Pool"],
+      url:"https://www.apartments.com/heritage-grove-broken-arrow-ok/ejv5z4m/",
+      notes:"Brand new (built 2025), most upscale option — resort-style pool w/ cabanas, dog park, fire pit. Move-in specials have been running (up to 2 months free). Seed data — verify current price.", photos:[]},
   ];
   return seed.map(s => ({...s, id: uid(), createdAt: Date.now()}));
 }
